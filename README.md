@@ -5,4 +5,5 @@
 ## Topics:
 * Introduction to Matrix Algebra
 * Data Analysis
-* Inference 
+* Inference
+* Minimizing RSS
