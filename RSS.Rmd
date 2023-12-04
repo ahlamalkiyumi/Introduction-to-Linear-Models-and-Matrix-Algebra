@@ -1,0 +1,218 @@
+---
+title: "Minimizing the RSS"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+Residual Sum of Squares (RSS) is the sum of the squared differences between the observed values (actual responses) and the values predicted by the regression model. 
+
+linear model example : y = beta0 + beta1 (X1) + c 
+
+Ordinary Least Squares (OLS) method used to estimate the coefficients in linear regression (beta). 
+The OLS solution provides the coefficients that minimize the RSS, resulting in a regression line that best fits the observed data.
+
+```{r }
+library(UsingR)
+x=father.son$fheight
+y=father.son$sheight
+X <- cbind(1,x)
+betahat <- solve(t(X)%*%X)%*%t(X)%*%y
+betahat <- solve(crossprod(X))%*%crossprod(X,y) 
+```
+
+## Plot
+
+```{r pressure, echo=FALSE}
+g <- 9.8 
+n <- 25
+tt <- seq(0,3.4,len=n) 
+f <- 56.67  - 0.5*g*tt^2
+y <-  f + rnorm(n,sd=1)
+plot(tt,y,ylab="Distance in meters",xlab="Time in seconds")
+lines(tt,f,col=2)
+```
+
+## Plot the minimum
+
+```{r pressure, echo=FALSE}
+rss <- function(Beta0,Beta1,Beta2){
+  r <- y - (Beta0+Beta1*tt+Beta2*tt^2)
+  return(sum(r^2))
+}
+Beta2s <- seq(-10,0,len=100)
+RSS <- sapply(Beta2s, rss, Beta0=55, Beta1=0)
+plot(Beta2s, RSS, type="l")
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+## Matrix Algebra Examples Exercises
+X <- matrix(c(1,1,1,1,0,0,1,1),nrow=4)
+rownames(X) <- c("a","a","b","b")
+Suppose that the fitted parameters for a linear model
+beta <- c(5, 2)
+
+# Question 1
+
+What is the fitted value for the A samples? (The fitted Y values.)
+
+```{r }
+beta <- matrix(c(5,2),nrow=2,ncol=1)
+X[1:2,] %*% beta
+```
+
+#Question 2
+
+What is the fitted value for the B samples? (The fitted Y values.)
+
+```{r }
+X[3:4,] %*% beta
+```
+
+
+## Inference Review 
+
+#Exercises #1
+
+```{r }
+RNGkind("Mersenne-Twister", "Inversion", "Rejection")
+g = 9.8 
+h0 = 56.67
+v0 = 0
+n = 25
+tt = seq(0,3.4,len=n) ##time in secs, t is a base function
+y = h0 + v0 *tt  - 0.5* g*tt^2 + rnorm(n,sd=1)
+
+X = cbind(1,tt,tt^2)
+A = solve(crossprod(X))%*%t(X)
+```
+
+
+# Exercises #2
+```{r }
+set.seed(1)
+B = 100000
+g = 9.8
+n =25
+tt = seq(0,3.4,len=n)
+X = cbind(1,tt,tt^2) 
+A = solve(crossprod(X))%*%t(X)
+betahat = replicate(B,{
+  y=56.67 - 0.5*g*tt^2 + rnorm(n,sd=1)
+  betahats = -2*A%*%y
+  return(betahats[3])
+  })
+sqrt(mean((betahat-mean(betahat))^2))
+```
+
+# Standard Errors Exercises
+
+```{r }
+library(UsingR)
+x = father.son$fheight
+y = father.son$sheight
+n = length(y)
+N = 50
+set.seed(1)
+index = sample(n,N)
+sampledat = father.son[index,]
+x = sampledat$fheight
+y = sampledat$sheight
+betahat = lm(y~x)$coef
+```
+
+
+#Standard Errors Exercises #1
+
+fitted values Yhat from a linear model can be obtained with:
+fit = lm(y~x)
+fit$fitted.values
+
+What is the sum of the squared residuals (where residuals are given by ri = yi - yhat
+
+```{r }
+sum((y - fit$fitted.values)^2)
+```
+
+#Standard Errors Exercises #2
+X = cbind(rep(1,N),x)
+
+The inverse of X transpose times X. Use the solve() function for the inverse and t() for the transpose. What is the element in the first row, first column?
+
+```{r }
+a = solve(t(X)%*% X)
+a[1,1]
+```
+
+#Standard Errors Exercises #3
+
+```{r }
+fit = lm(y ~x)
+sigma2 = sum((y - fit$fitted.values)^2) / (N-2)
+sqrt(sigma2 * diag(solve(t(X) %*% X)))
+```
+
+# Week 2 Quiz
+
+RNGkind("Mersenne-Twister", "Inversion", "Rejection")
+X <- matrix(c(1,1,1,1,1,1,0,0,1,1,0,0,0,0,0,0,1,1),nrow=6)
+rownames(X) <- c("a","a","b","b","c","c")
+beta <- c(10,3,-3)
+
+#Question #1
+
+What is the fitted value for the B samples?
+```{r }
+X[3:4,] %*% beta
+```
+
+#Question #2
+
+What is the fitted value for the C samples?
+```{r }
+X[5:6,] %*% beta
+```
+
+#Question #3
+```{r}
+library(UsingR)
+x = father.son$fheight
+y = father.son$sheight
+n = length(y)
+```
+
+Now let's run a Monte Carlo simulation in which we take a sample of size 50 over and over again. Here is how we obtain one sample:
+```{r}
+N =  50
+index = sample(n,N)
+sampledat = father.son[index,]
+x = sampledat$fheight
+y = sampledat$sheight
+betahat =  lm(y~x)$coef
+```
+
+Use the function replicate() to take 10,000 samples
+```{r}
+N = 50
+B = 10000
+set.seed(1)
+betahat = replicate(B,{
+  index = sample(n,N)
+  sampledat = father.son[index,]
+  x = sampledat$fheight
+  y = sampledat$sheight
+  lm(y~x)$coef[2]
+})
+sqrt ( mean( (betahat - mean(betahat) )^2 ))
+```
+
+# Question #4
+```{r}
+mean((y - mean(y))*(x-mean(x)))
+```
