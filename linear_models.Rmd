@@ -1,0 +1,125 @@
+---
+title: "Matrix Multiplication I"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Matrix Multiplication I
+
+Copmuter often prefer matrices. It makes the computations faster and easier.  
+
+## Expressing Experimental Designs
+
+Now, we will show how to use "formula" and "model.matrix"
+
+```{r }
+x <- c(1,1,2,2)
+f <- formula(~ x)
+f
+```
+
+```{r }
+model.matrix(f)
+```
+
+```{r }
+x <- factor(c(1,1,2,2))
+model.matrix(~ x)
+```
+
+```{r }
+x <- factor(c(1,1,2,2,3,3))
+model.matrix(~ x)
+model.matrix(~ x,contrasts=list(x="contr.sum"))
+```
+```{r }
+x <- factor(c(1,1,1,1,2,2,2,2))
+y <- factor(c("a","a","b","b","a","a","b","b"))
+model.matrix(~ x + y)
+```
+```{r }
+model.matrix(~ x + y + x:y)
+model.matrix(~ x*y)
+```
+Use function relevel to say that we want 2 to be first level
+
+```{r}
+x <- factor(c(1,1,2,2))
+model.matrix(~ x)
+x <- relevel(x,"2")
+model.matrix(~ x)
+x <- factor(x, levels=c("1","2"))
+```
+
+```{r, echo = FALSE}
+z <- 1:4 
+model.matrix(~ z)
+model.matrix(~ 0 + z)
+model.matrix(~ z + I(z^2))
+```
+
+## Linear Models in Practice I
+
+Comparison between two groups of mice that were given two diets
+
+```{r }
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv"
+filename <- "femaleMiceWeights.csv"
+library(downloader)
+if (!file.exists(filename)) download(url,filename)
+set.seed(1)
+dat <- read.csv("femaleMiceWeights.csv") ##previously downloaded
+stripchart(dat$Bodyweight ~ dat$Diet, vertical=TRUE, method="jitter",
+           main="Bodyweight over Diet")
+```
+## A linear model with one variable 
+
+Analyzing the difference between the two groups using linear models
+
+-Diet is a factor that has two levels, chow and hf. factor used to represent categorical variables in R. 
+-level : used to display the unique levels of factor. 
+-Then we will create matrix X 
+if diet = hf we will get 1 
+```{r }
+dat$Diet <- as.factor(dat$Diet)
+levels(dat$Diet) 
+X <- model.matrix(~Diet, data = dat)
+X 
+```
+```{r }
+colnames(X)
+dat$Diet <- relevel(dat$Diet, ref = "hf")
+model.matrix(~Diet, data = dat)
+dat$Diet <- relevel(dat$Diet, ref = "chow")
+```
+
+## Linear Models in Practice II
+
+## Running the linear model
+
+lm : function for linear model
+
+```{r }
+fit <- lm(Bodyweight ~ Diet, data=dat)
+summary(fit)
+(coefs <- coef(fit))
+```
+## The mathmatics behind lm()
+
+$$ \hat{\boldsymbol{\beta}} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{Y} $$
+
+```{r }
+Y <- dat$Bodyweight
+X <- model.matrix(~ Diet, data=dat)
+solve(t(X) %*% X) %*% t(X) %*% Y
+```
+
+Another way using the average: 
+```{r }
+s <- split(dat$Bodyweight, dat$Diet)
+mean(s[["chow"]])
+mean(s[["hf"]]) - mean(s[["chow"]])
+```
