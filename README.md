@@ -7,3 +7,4 @@
 * Data Analysis
 * Inference
 * Minimizing RSS
+* Linear Models
