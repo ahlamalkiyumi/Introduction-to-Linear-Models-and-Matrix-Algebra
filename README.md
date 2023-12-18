@@ -9,3 +9,4 @@
 * Minimizing RSS
 * Linear Models
 * Interactions and Contrasts
+* Collinearity
