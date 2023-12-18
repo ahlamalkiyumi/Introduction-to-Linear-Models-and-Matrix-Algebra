@@ -1,0 +1,306 @@
+---
+title: "Interactions and Contrasts I"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Interactions and Contrasts I
+
+Interactions: the effect of one variable on the dependent variable differs depending on the level of another variable.
+Example: the relationship between the drug and blood pressure is not the same for all age groups.
+
+Contrast: a linear combination of variables such that all the coefficients add up to zero
+
+```{r }
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/spider_wolff_gorb_2013.csv"
+filename <- "spider_wolff_gorb_2013.csv"
+library(downloader)
+if (!file.exists(filename)) download(url, filename)
+spider <- read.csv("spider_wolff_gorb_2013.csv", skip=1)
+spider
+```
+
+boxplot with friction in y-axis
+```{r }
+boxplot(spider$friction ~ spider$type * spider$leg,
+        col=c("grey90","grey40"), las=2,
+        main="Comparison of friction coefficients of different leg pairs")
+```
+
+## A linear model with one variable
+
+We will choose data with L1 rows. 
+Model the friction as y and type as x variable 
+```{r }
+spider.sub <- spider[spider$leg == "L1",]
+fit <- lm(friction ~ type, data=spider.sub)
+summary(fit)
+(coefs <- coef(fit))
+```
+
+```{r }
+s <- split(spider.sub$friction, spider.sub$type)
+mean(s[["pull"]])
+mean(s[["push"]]) - mean(s[["pull"]])
+```
+
+We can form the design matrix, which was used inside `lm`:
+```{r }
+X <- model.matrix(~ type, data=spider.sub)
+colnames(X)
+head(X)
+tail(X)
+```
+```{r }
+library(rafalib)
+imagemat(X, main="Model matrix for linear model with one variable")
+```
+
+
+#### Examining the estimated coefficients
+
+```{r }
+set.seed(1) #same jitter in stripchart
+stripchart(split(spider.sub$friction, spider.sub$type), 
+           vertical=TRUE, pch=1, method="jitter", las=2, xlim=c(0,3), ylim=c(0,2))
+a <- -0.25
+lgth <- .1
+library(RColorBrewer)
+cols <- brewer.pal(3,"Dark2")
+abline(h=0)
+arrows(1+a,0,1+a,coefs[1],lwd=3,col=cols[1],length=lgth)
+abline(h=coefs[1],col=cols[1])
+arrows(2+a,coefs[1],2+a,coefs[1]+coefs[2],lwd=3,col=cols[2],length=lgth)
+abline(h=coefs[1]+coefs[2],col=cols[2])
+legend("right",names(coefs),fill=cols,cex=.75,bg="white")
+```
+## Interactions and Contrasts II
+
+## A linear model with two variables
+
+```{r }
+X <- model.matrix(~ type + leg, data=spider)
+colnames(X)
+head(X)
+```
+
+```{r }
+imagemat(X, main="Model matrix for linear model with two factors")
+```
+
+```{r }
+fit2 <- lm(friction ~ type + leg, data=spider)
+summary(fit2)
+(coefs <- coef(fit2))
+```
+## Examining the estimated coefficients
+```{r }
+spider$group <- factor(paste0(spider$leg, spider$type))
+stripchart(split(spider$friction, spider$group), 
+           vertical=TRUE, pch=1, method="jitter", las=2, xlim=c(0,11), ylim=c(0,2))
+cols <- brewer.pal(5,"Dark2")
+abline(h=0)
+arrows(1+a,0,1+a,coefs[1],lwd=3,col=cols[1],length=lgth)
+abline(h=coefs[1],col=cols[1])
+arrows(3+a,coefs[1],3+a,coefs[1]+coefs[3],lwd=3,col=cols[3],length=lgth)
+arrows(5+a,coefs[1],5+a,coefs[1]+coefs[4],lwd=3,col=cols[4],length=lgth)
+arrows(7+a,coefs[1],7+a,coefs[1]+coefs[5],lwd=3,col=cols[5],length=lgth)
+arrows(2+a,coefs[1],2+a,coefs[1]+coefs[2],lwd=3,col=cols[2],length=lgth)
+segments(3+a,coefs[1]+coefs[3],4+a,coefs[1]+coefs[3],lwd=3,col=cols[3])
+arrows(4+a,coefs[1]+coefs[3],4+a,coefs[1]+coefs[3]+coefs[2],lwd=3,col=cols[2],length=lgth)
+segments(5+a,coefs[1]+coefs[4],6+a,coefs[1]+coefs[4],lwd=3,col=cols[4])
+arrows(6+a,coefs[1]+coefs[4],6+a,coefs[1]+coefs[4]+coefs[2],lwd=3,col=cols[2],length=lgth)
+segments(7+a,coefs[1]+coefs[5],8+a,coefs[1]+coefs[5],lwd=3,col=cols[5])
+arrows(8+a,coefs[1]+coefs[5],8+a,coefs[1]+coefs[5]+coefs[2],lwd=3,col=cols[2],length=lgth)
+legend("right",names(coefs),fill=cols,cex=.75,bg="white")
+```
+
+## Contrasts Exercises
+
+Suppose we have an experiment with two species A and B, and two conditions: control and treated
+```{r }
+species <- factor(c("A","A","B","B"))
+condition <- factor(c("control","treated","control","treated"))
+```
+
+```{r }
+model.matrix(~ species + condition)
+```
+## Contrasts Exercises #1
+
+What should the contrast vector be, for the contrast of (species=B and condition=control) vs (species=A and condition=treatment)? Assume that the beta vector from the model fit by R is: Intercept, speciesB, conditiontreated
+
+rnorm(4): generate 4 random numbers with mean=0 and sd=1.
+
+```{r }
+library(contrast) ##Available from CRAN
+y = rnorm(4)
+fit = lm(y ~ species + condition)
+contrasts(fit, list(species="B",condition="control"), list(species="A",condition="treated"))$X
+```
+
+
+## Contrasts Exercises #2
+
+What is the t-value for the contrast of leg pair L4 vs leg pair L2?
+```{r }
+spider <- read.csv("spider_wolff_gorb_2013.csv", skip=1)
+fit <- lm(friction~type+leg, data = spider)
+res <- contrast(fit, list(leg ='L4',type = 'pull'),
+         list(leg = 'L2',type='pull'))
+res$testStat
+```
+
+
+## Interactions and Contrasts III
+
+## Linear Model with Interactions
+```{r }
+X <- model.matrix(~ type + leg + type:leg, data=spider)
+colnames(X)
+head(X)
+```
+```{r }
+imagemat(X, main="Model matrix for linear model with interactions")
+```
+
+```{r }
+fitX <- lm(friction ~ type + leg + type:leg, data=spider)
+summary(fitX)
+coefs <- coef(fitX)
+```
+## Interactions and Contrasts IV
+
+Suppose we want to know the push vs. pull effect for the L2 leg pair samples
+```{r }
+install.packages(c("Matrix", "MatrixModels", "mvtnorm"), type = "binary")
+install.packages("rms")
+install.packages("polspline")
+library(polspline)
+library(rms)
+library(contrast)
+L2push.vs.pull <- contrast(fitX,
+                   list(leg="L2", type = "push"), 
+                   list(leg="L2", type = "pull"))
+L2push.vs.pull
+coefs[2] + coefs[6] ##we know this is also orange + yellow arrow
+```
+## Differences of differences
+
+Suppose we want to know if the push vs. pull difference is *different* in L3 compared to L2.
+```{r }
+library(multcomp)
+C <- matrix(c(0,0,0,0,0,-1,1,0),1)
+L3vsL2interaction <- glht(fitX, linfct=C)
+summary(L3vsL2interaction)
+coefs[7] - coefs[6]
+```
+
+## Analysis of Variance
+
+Suppose that we want to know if the push vs. pull difference is different across leg pairs in general. 
+test 3 coefficient as once
+```{r }
+anova(fitX)
+```
+## Interactions Exercises
+
+```{r }
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/spider_wolff_gorb_2013.csv"
+filename <- "spider_wolff_gorb_2013.csv"
+library(downloader)
+if (!file.exists(filename)) download(url, filename)
+spider <- read.csv(filename, skip=1)
+```
+
+Add a new variable log2friction to the spider dataframe:
+
+```{r }
+spider$log2friction <- log2(spider$friction)
+```
+
+The 'Y' values now look like:
+
+```{r }
+boxplot(log2friction ~ type*leg, data=spider)
+```
+## Interactions Exercises #1
+
+What is the t-value for the interaction of type push and leg L4? 
+```{r }
+fit = lm(log2friction ~ type + leg + type:leg, data=spider)
+summary(fit)
+```
+## Interactions Exercises #2
+
+What is the F-value for all of the type:leg interaction terms, in an analysis of variance? If this value is sufficiently large, we would reject the null hypothesis that the push vs pull effect on log2(friction) is the same for all leg pairs.
+
+```{r }
+anova(fit)
+```
+## Interactions Exercises #3
+What is the L2 vs L1 estimate in log2(friction) for the pull samples?
+```{r }
+coef(fit)["legL2"]
+
+```
+
+## Interactions Exercises #4
+
+What is the L2 vs L1 estimate in log2friction for the push samples?
+```{r }
+L2push.vs.L1push <- contrast(fit, 
+                             list(leg="L2", type="push"),
+                             list(leg="L1", type ="push"),)
+L2push.vs.L1push
+coef(fit)["legL2"] + coef(fit)["typepush:legL2"]
+```
+
+## Interactions and Contrasts V
+
+#### A different specification of the same model
+
+adding zero means we don't want intercept in this model matrix
+```{r }
+spider$group <- factor(paste0(spider$leg, spider$type))
+X <- model.matrix(~ 0 + group, data=spider)
+colnames(X)
+head(X)
+imagemat(X, main="Model matrix for linear model with group variable")
+```
+```{r }
+fitG <- lm(friction ~ 0 + group, data=spider)
+summary(fitG)
+coefs <- coef(fitG)
+```
+```{r }
+stripchart(split(spider$friction, spider$group), 
+           vertical=TRUE, pch=1, method="jitter", las=2, xlim=c(0,11), ylim=c(0,2))
+cols <- brewer.pal(8,"Dark2")
+abline(h=0)
+for (i in 1:8) {
+  arrows(i+a,0,i+a,coefs[i],lwd=3,col=cols[i],length=lgth)
+}
+legend("right",names(coefs),fill=cols,cex=.75,bg="white")
+```
+#### Simple contrasts using the contrast package
+
+```{r }
+groupL2push.vs.pull <- contrast(fitG,
+                                list(group = "L2push"),
+                                list(group = "L2pull"))
+groupL2push.vs.pull
+coefs[4] - coefs[3]
+```
+## Differences of differences when there is no intercept
+
+```{r }
+C <- matrix(c(0,0,1,-1,-1,1,0,0), 1)
+groupL3vsL2interaction <- glht(fitG, linfct=C)
+summary(groupL3vsL2interaction)
+names(coefs)
+(coefs[6] - coefs[5]) - (coefs[4] - coefs[3])
+```
