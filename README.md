@@ -8,3 +8,4 @@
 * Inference
 * Minimizing RSS
 * Linear Models
+* Interactions and Contrasts
