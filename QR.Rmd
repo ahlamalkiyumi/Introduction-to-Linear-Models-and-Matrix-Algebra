@@ -1,0 +1,83 @@
+---
+title: "QR"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## QR
+
+Use QR factorization when we can't solve X to minimize rss
+X = QR
+Q a N x p matrix with Q^t * Q = I
+R a P x p upper triangular matrix
+
+## Example
+```{r }
+n <- 50;M <- 500
+x <- seq(1,M,len=n)
+X <- cbind(1,x,x^2,x^3)
+beta <- matrix(c(1,1,1,1),4,1)
+y <- X%*%beta+rnorm(n,sd=1)
+solve(crossprod(X))
+```
+we see that we can't solve crossprod(X)
+Now we will use QR
+```{r }
+QR <- qr(X)
+Q <- qr.Q(QR)
+R <- qr.R(QR)
+betahat <- backsolve(R, crossprod(Q,y))
+betahat
+```
+There is a function in R can do all that 
+```{r }
+QR <- qr(X)
+betahat <- solve.qr(QR, y)
+```
+
+```{r }
+fitted <- tcrossprod(Q)%*%y
+lines(x,fitted,col=2)
+```
+We can compute Standard Errors
+```{r }
+df <- length(y) - QR$rank
+sigma2 <- sum((y-fitted)^2)/df
+var <- sigma2*chol2inv(QR$qr)
+SE <- sqrt(diag(var))
+cbind(betahat, SE)
+```
+Use linear model
+```{r }
+summary(lm(y~X-1))$coef
+```
+## QR Exercises
+```{r }
+fit <- lm(friction ~ type + leg, data=spider)
+betahat <- coef(fit)
+Y <- matrix(spider$friction, ncol=1)
+X <- model.matrix(~ type + leg, data=spider)
+```
+
+## QR Exercises #1
+What is the first row, first column element in the Q matrix for this linear model?
+```{r }
+QR <- qr(X)
+Q <- qr.Q(QR)
+t(Q[1,1])
+```
+
+What is the first row, first column element in the R matrix for this linear model?
+```{r }
+R <- qr.R( QR )
+t(R[1,1])
+```
+
+What is the first row, first column element of Q^t * Y?
+```{r }
+Rbetahat <- crossprod(Q,Y)
+Rbetahat[1,1]
+```
