@@ -10,3 +10,4 @@
 * Linear Models
 * Interactions and Contrasts
 * Collinearity
+* QR Factorization
